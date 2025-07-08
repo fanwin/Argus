@@ -1,0 +1,71 @@
+# 预发布环境配置
+environment: staging
+
+# API配置
+api:
+  base_url: "https://api-staging.example.com"
+  timeout: 30
+  retry_count: 3
+  retry_delay: 2
+  headers:
+    Content-Type: "application/json"
+    Accept: "application/json"
+  auth:
+    type: "bearer"
+    token: ""
+    username: ""
+    password: ""
+
+# Web UI配置
+web:
+  base_url: "https://staging.example.com"
+  browser: "chrome"
+  headless: true  # 预发布环境使用无头模式
+  window_size: "1920,1080"
+  implicit_wait: 10
+  explicit_wait: 30
+  page_load_timeout: 60
+  screenshot_on_failure: true
+  
+# 数据库配置
+database:
+  host: "staging-db.example.com"
+  port: 5432
+  name: "staging_db"
+  username: "staging_user"
+  password: "staging_password"
+  
+# 测试数据配置
+test_data:
+  users:
+    admin:
+      username: "admin@staging.com"
+      password: "admin123"
+    regular:
+      username: "user@staging.com"
+      password: "user123"
+  
+# 日志配置
+logging:
+  level: "INFO"
+  format: "{time:YYYY-MM-DD HH:mm:ss} | {level} | {name}:{function}:{line} | {message}"
+  file: "reports/test_staging.log"
+  rotation: "50 MB"
+  retention: "14 days"
+
+# 报告配置
+reporting:
+  allure:
+    results_dir: "reports/allure-results"
+    report_dir: "reports/allure-report"
+  html:
+    report_file: "reports/report_staging.html"
+  
+# 并发配置
+concurrency:
+  max_workers: 8
+  
+# 重试配置
+retry:
+  max_attempts: 2
+  delay: 3

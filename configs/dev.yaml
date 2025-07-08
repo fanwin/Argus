@@ -1,0 +1,71 @@
+# 开发环境配置
+environment: dev
+
+# API配置
+api:
+  base_url: "https://api-dev.example.com"
+  timeout: 30
+  retry_count: 3
+  retry_delay: 1
+  headers:
+    Content-Type: "application/json"
+    Accept: "application/json"
+  auth:
+    type: "bearer"  # bearer, basic, oauth2
+    token: ""
+    username: ""
+    password: ""
+
+# Web UI配置
+web:
+  base_url: "https://dev.example.com"
+  browser: "chrome"  # chrome, firefox, edge, safari
+  headless: false
+  window_size: "1920,1080"
+  implicit_wait: 10
+  explicit_wait: 30
+  page_load_timeout: 60
+  screenshot_on_failure: true
+  
+# 数据库配置
+database:
+  host: "dev-db.example.com"
+  port: 5432
+  name: "test_db"
+  username: "test_user"
+  password: "test_password"
+  
+# 测试数据配置
+test_data:
+  users:
+    admin:
+      username: "admin@dev.com"
+      password: "admin123"
+    regular:
+      username: "user@dev.com"
+      password: "user123"
+  
+# 日志配置
+logging:
+  level: "DEBUG"
+  format: "{time:YYYY-MM-DD HH:mm:ss} | {level} | {name}:{function}:{line} | {message}"
+  file: "reports/test_dev.log"
+  rotation: "10 MB"
+  retention: "7 days"
+
+# 报告配置
+reporting:
+  allure:
+    results_dir: "reports/allure-results"
+    report_dir: "reports/allure-report"
+  html:
+    report_file: "reports/report_dev.html"
+  
+# 并发配置
+concurrency:
+  max_workers: 4
+  
+# 重试配置
+retry:
+  max_attempts: 3
+  delay: 2

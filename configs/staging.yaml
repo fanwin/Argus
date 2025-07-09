@@ -3,18 +3,26 @@ environment: staging
 
 # API配置
 api:
-  base_url: "https://api-staging.example.com"
+  base_url: "https://api-staging.yourproject.com"  # 请替换为实际的预发布环境API地址
   timeout: 30
   retry_count: 3
   retry_delay: 2
   headers:
     Content-Type: "application/json"
     Accept: "application/json"
+    User-Agent: "AutoTest/1.0"
   auth:
-    type: "bearer"
-    token: ""
-    username: ""
-    password: ""
+    type: "bearer"  # bearer, basic, oauth2, api_key, jwt
+    token: ""  # 从环境变量 API_TOKEN 获取
+    username: ""  # 从环境变量 API_USERNAME 获取
+    password: ""  # 从环境变量 API_PASSWORD 获取
+    api_key: ""  # 从环境变量 API_KEY 获取
+    api_key_header: "X-API-Key"
+    jwt_secret: ""  # 从环境变量 JWT_SECRET 获取
+  ssl_verify: true
+  proxy:
+    http: ""
+    https: ""
 
 # Web UI配置
 web:

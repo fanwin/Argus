@@ -276,6 +276,308 @@ log.info("这是一条信息日志")
 log.error("这是一条错误日志")
 ```
 
+### 数据生成和验证
+```python
+from utilities.data_generator import data_generator
+from utilities.data_validator import data_validator
+
+# 生成测试用户数据
+users = data_generator.generate_user_data(count=5)
+
+# 验证用户数据
+result = data_validator.validate_user_data(users[0])
+```
+
+### 页面对象模型
+```python
+from page_objects import LoginPage, HomePage, UserManagementPage
+
+# 使用登录页面
+login_page = LoginPage(selenium_wrapper)
+login_page.navigate_to_login_page()
+login_page.login("user@example.com", "password123")
+
+# 使用主页
+home_page = HomePage(selenium_wrapper)
+home_page.search("产品")
+```
+
+## 🚀 快速运行
+
+### 使用Python脚本运行
+```bash
+# 运行所有测试
+python run_tests.py
+
+# 运行冒烟测试
+python run_tests.py --type smoke --browser chrome --env dev
+
+# 运行API测试（并行）
+python run_tests.py --type api --parallel --env staging
+
+# 只运行框架验证
+python run_tests.py --validate
+
+# 生成Allure报告
+python run_tests.py --report
+
+# 启动Allure报告服务器
+python run_tests.py --serve
+
+# 清理报告目录
+python run_tests.py --clean
+```
+
+### 使用部署脚本运行
+
+#### Linux/Mac
+```bash
+# 赋予执行权限
+chmod +x scripts/deploy.sh
+
+# 运行测试
+./scripts/deploy.sh --env dev --type smoke --browser chrome
+
+# 使用Docker运行
+./scripts/deploy.sh --docker --env staging --type all --parallel
+
+# 清理环境
+./scripts/deploy.sh --clean
+```
+
+#### Windows
+```cmd
+# 运行测试
+scripts\deploy.bat --env dev --type smoke --browser chrome
+
+# 使用Docker运行
+scripts\deploy.bat --docker --env staging --type all --parallel
+
+# 清理环境
+scripts\deploy.bat --clean
+```
+
+## 🐳 Docker支持
+
+### 构建和运行
+```bash
+# 构建Docker镜像
+docker build -t argus-test .
+
+# 运行单个容器
+docker run --rm -v $(pwd)/reports:/app/reports argus-test
+
+# 使用Docker Compose运行完整环境
+docker-compose up --build
+
+# 后台运行
+docker-compose up -d
+
+# 查看日志
+docker-compose logs -f test-runner
+
+# 停止服务
+docker-compose down
+```
+
+### 服务访问
+- **Selenium Grid Hub**: http://localhost:4444
+- **Allure报告服务器**: http://localhost:5050
+- **Grafana监控**: http://localhost:3000 (admin/admin)
+- **Kibana日志分析**: http://localhost:5601
+- **Prometheus监控**: http://localhost:9090
+
+## 🔄 CI/CD集成
+
+### GitHub Actions
+项目包含完整的GitHub Actions工作流配置（`.github/workflows/test.yml`），支持：
+
+- **多Python版本测试** (3.8, 3.9, 3.10, 3.11)
+- **多浏览器支持** (Chrome, Firefox)
+- **并行测试执行**
+- **自动报告生成**
+- **安全扫描**
+- **性能测试**
+- **Slack/邮件通知**
+
+触发方式：
+- 推送到main/develop分支
+- Pull Request
+- 定时执行（每天凌晨2点）
+- 手动触发
+
+### Jenkins
+项目包含Jenkinsfile配置，支持：
+
+- **参数化构建**
+- **多阶段并行执行**
+- **代码质量检查**
+- **安全扫描**
+- **多环境部署**
+- **报告发布**
+- **通知集成**
+
+### 环境变量配置
+```bash
+# API配置
+export API_BASE_URL="https://api.yourproject.com"
+export API_TOKEN="your-api-token"
+export API_USERNAME="your-username"
+export API_PASSWORD="your-password"
+
+# Web配置
+export WEB_BASE_URL="https://yourproject.com"
+export BROWSER="chrome"
+export HEADLESS="true"
+
+# 数据库配置
+export DB_HOST="db.yourproject.com"
+export DB_USERNAME="db-user"
+export DB_PASSWORD="db-password"
+
+# 通知配置
+export SLACK_WEBHOOK_URL="your-slack-webhook"
+export NOTIFICATION_EMAIL="team@yourproject.com"
+```
+
+## 📊 数据管理
+
+### 测试数据生成
+```python
+from utilities.data_generator import DataGenerator
+
+generator = DataGenerator()
+
+# 生成用户数据
+users = generator.generate_user_data(count=10)
+
+# 生成产品数据
+products = generator.generate_product_data(count=5)
+
+# 生成API测试数据
+api_data = generator.generate_api_test_data("/api/users", "POST")
+
+# 批量生成数据
+bulk_data = generator.generate_bulk_test_data(
+    ["users", "products", "orders"],
+    {"users": 10, "products": 5, "orders": 8}
+)
+
+# 保存到文件
+generator.save_test_data_to_file(bulk_data, "generated_data.json")
+```
+
+### 数据验证
+```python
+from utilities.data_validator import DataValidator
+
+validator = DataValidator()
+
+# 验证用户数据
+user_data = {"username": "test", "email": "test@example.com"}
+result = validator.validate_user_data(user_data)
+
+# 验证表单数据
+form_rules = {
+    "email": {"required": True, "type": "email"},
+    "password": {"required": True, "min_length": 8}
+}
+form_result = validator.validate_form_data(form_data, form_rules)
+
+# 验证测试数据文件
+file_result = validator.validate_test_data_file("data/test_data.json")
+```
+
+### 配置管理
+```python
+from utilities.config_reader import config
+
+# 加载配置
+config.load_config("dev")
+
+# 获取API配置
+api_config = config.get_api_config()
+
+# 获取Web配置
+web_config = config.get_web_config()
+
+# 验证配置
+is_valid = config.validate_config()
+```
+
+## 🧪 页面对象模型
+
+### 基础页面对象
+```python
+from page_objects.base_page import BasePage
+
+class MyPage(BasePage):
+    def __init__(self, selenium_wrapper):
+        super().__init__(selenium_wrapper)
+
+    def custom_action(self):
+        # 自定义页面操作
+        pass
+```
+
+### 现有页面对象
+
+#### 登录页面
+```python
+from page_objects.login_page import LoginPage
+
+login_page = LoginPage(selenium_wrapper)
+login_page.navigate_to_login_page()
+login_page.login("user@example.com", "password123")
+```
+
+#### 主页
+```python
+from page_objects.home_page import HomePage
+
+home_page = HomePage(selenium_wrapper)
+home_page.navigate_to_home_page()
+home_page.search("关键词")
+home_page.click_products_link()
+```
+
+#### 用户管理页面
+```python
+from page_objects.user_management_page import UserManagementPage
+
+user_page = UserManagementPage(selenium_wrapper)
+user_page.navigate_to_user_management_page()
+user_page.create_user({
+    "username": "newuser",
+    "email": "newuser@example.com",
+    "password": "password123"
+})
+```
+
+#### 搜索页面
+```python
+from page_objects.search_page import SearchPage
+
+search_page = SearchPage(selenium_wrapper)
+search_page.navigate_to_search_page()
+search_page.search("产品")
+results = search_page.get_search_results()
+```
+
+#### 表单页面
+```python
+from page_objects.form_page import FormPage
+
+form_page = FormPage(selenium_wrapper)
+form_data = {
+    "name": "张三",
+    "email": "zhangsan@example.com",
+    "message": "测试消息"
+}
+form_page.fill_form_data(form_data)
+form_page.submit_form()
+```
+
 ### 数据驱动测试
 ```python
 @pytest.mark.parametrize("user_data", [

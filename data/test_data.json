@@ -198,5 +198,296 @@
         "status": "inactive"
       }
     ]
+  },
+  "user_management_test_data": {
+    "new_users": [
+      {
+        "username": "newuser1",
+        "email": "newuser1@example.com",
+        "password": "NewUser123!",
+        "confirm_password": "NewUser123!",
+        "role": "用户",
+        "status": "激活",
+        "expected_result": "success"
+      },
+      {
+        "username": "newuser2",
+        "email": "newuser2@example.com",
+        "password": "NewUser456@",
+        "confirm_password": "NewUser456@",
+        "role": "管理员",
+        "status": "激活",
+        "expected_result": "success"
+      }
+    ],
+    "invalid_users": [
+      {
+        "username": "",
+        "email": "invalid@example.com",
+        "password": "123456",
+        "confirm_password": "123456",
+        "role": "用户",
+        "status": "激活",
+        "expected_result": "error",
+        "expected_error": "用户名不能为空"
+      },
+      {
+        "username": "invaliduser",
+        "email": "invalid-email",
+        "password": "123456",
+        "confirm_password": "123456",
+        "role": "用户",
+        "status": "激活",
+        "expected_result": "error",
+        "expected_error": "邮箱格式不正确"
+      }
+    ],
+    "user_filters": [
+      "全部用户",
+      "激活用户",
+      "停用用户",
+      "管理员",
+      "普通用户"
+    ],
+    "user_roles": [
+      "管理员",
+      "用户",
+      "访客"
+    ]
+  },
+  "home_page_test_data": {
+    "navigation_links": [
+      "首页",
+      "产品",
+      "服务",
+      "关于我们",
+      "联系我们"
+    ],
+    "search_keywords": [
+      "产品",
+      "服务",
+      "帮助",
+      "文档",
+      "支持"
+    ],
+    "expected_elements": [
+      "主导航",
+      "搜索框",
+      "主要内容区域",
+      "页脚"
+    ]
+  },
+  "file_upload_test_data": {
+    "valid_files": [
+      {
+        "filename": "test_document.pdf",
+        "size": "1MB",
+        "type": "application/pdf",
+        "expected_result": "success"
+      },
+      {
+        "filename": "test_image.jpg",
+        "size": "500KB",
+        "type": "image/jpeg",
+        "expected_result": "success"
+      },
+      {
+        "filename": "test_data.xlsx",
+        "size": "2MB",
+        "type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "expected_result": "success"
+      }
+    ],
+    "invalid_files": [
+      {
+        "filename": "large_file.zip",
+        "size": "50MB",
+        "type": "application/zip",
+        "expected_result": "error",
+        "expected_error": "文件大小超过限制"
+      },
+      {
+        "filename": "malicious.exe",
+        "size": "1MB",
+        "type": "application/x-msdownload",
+        "expected_result": "error",
+        "expected_error": "不支持的文件类型"
+      }
+    ],
+    "supported_formats": [
+      ".pdf",
+      ".doc",
+      ".docx",
+      ".xls",
+      ".xlsx",
+      ".jpg",
+      ".jpeg",
+      ".png",
+      ".gif"
+    ],
+    "max_file_size": "10MB"
+  },
+  "pagination_test_data": {
+    "page_sizes": [
+      "10",
+      "25",
+      "50",
+      "100"
+    ],
+    "test_scenarios": [
+      {
+        "total_items": 100,
+        "page_size": 10,
+        "expected_pages": 10
+      },
+      {
+        "total_items": 95,
+        "page_size": 25,
+        "expected_pages": 4
+      }
+    ]
+  },
+  "browser_test_data": {
+    "supported_browsers": [
+      "chrome",
+      "firefox",
+      "edge",
+      "safari"
+    ],
+    "screen_resolutions": [
+      "1920x1080",
+      "1366x768",
+      "1440x900",
+      "1024x768"
+    ],
+    "mobile_devices": [
+      "iPhone 12",
+      "iPhone 12 Pro",
+      "Samsung Galaxy S21",
+      "iPad",
+      "iPad Pro"
+    ]
+  },
+  "accessibility_test_data": {
+    "keyboard_navigation": [
+      "Tab",
+      "Shift+Tab",
+      "Enter",
+      "Space",
+      "Arrow Keys"
+    ],
+    "aria_attributes": [
+      "aria-label",
+      "aria-describedby",
+      "aria-expanded",
+      "aria-hidden",
+      "role"
+    ],
+    "color_contrast_ratios": {
+      "normal_text": 4.5,
+      "large_text": 3.0,
+      "ui_components": 3.0
+    }
+  },
+  "localization_test_data": {
+    "supported_languages": [
+      {
+        "code": "zh-CN",
+        "name": "简体中文",
+        "direction": "ltr"
+      },
+      {
+        "code": "en-US",
+        "name": "English",
+        "direction": "ltr"
+      },
+      {
+        "code": "ja-JP",
+        "name": "日本語",
+        "direction": "ltr"
+      }
+    ],
+    "currency_formats": [
+      {
+        "locale": "zh-CN",
+        "currency": "CNY",
+        "symbol": "¥",
+        "format": "¥1,234.56"
+      },
+      {
+        "locale": "en-US",
+        "currency": "USD",
+        "symbol": "$",
+        "format": "$1,234.56"
+      }
+    ],
+    "date_formats": [
+      {
+        "locale": "zh-CN",
+        "format": "YYYY年MM月DD日"
+      },
+      {
+        "locale": "en-US",
+        "format": "MM/DD/YYYY"
+      }
+    ]
+  },
+  "security_test_data": {
+    "sql_injection_payloads": [
+      "' OR '1'='1",
+      "'; DROP TABLE users; --",
+      "' UNION SELECT * FROM users --"
+    ],
+    "xss_payloads": [
+      "<script>alert('XSS')</script>",
+      "javascript:alert('XSS')",
+      "<img src=x onerror=alert('XSS')>"
+    ],
+    "csrf_test_scenarios": [
+      {
+        "action": "change_password",
+        "method": "POST",
+        "requires_token": true
+      },
+      {
+        "action": "delete_user",
+        "method": "DELETE",
+        "requires_token": true
+      }
+    ]
+  },
+  "error_handling_test_data": {
+    "http_error_codes": [
+      {
+        "code": 400,
+        "message": "Bad Request",
+        "expected_behavior": "显示错误消息"
+      },
+      {
+        "code": 401,
+        "message": "Unauthorized",
+        "expected_behavior": "重定向到登录页面"
+      },
+      {
+        "code": 403,
+        "message": "Forbidden",
+        "expected_behavior": "显示权限不足消息"
+      },
+      {
+        "code": 404,
+        "message": "Not Found",
+        "expected_behavior": "显示页面不存在消息"
+      },
+      {
+        "code": 500,
+        "message": "Internal Server Error",
+        "expected_behavior": "显示服务器错误消息"
+      }
+    ],
+    "network_error_scenarios": [
+      "connection_timeout",
+      "dns_resolution_failure",
+      "ssl_certificate_error"
+    ]
   }
 }

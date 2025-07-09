@@ -1,0 +1,303 @@
+name: Automated Testing
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # 每天凌晨2点运行
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      test_environment:
+        description: 'Test Environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - staging
+        - prod
+      test_type:
+        description: 'Test Type'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - api
+        - web
+        - smoke
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8, 3.9, '3.10', 3.11]
+        browser: [chrome, firefox]
+      fail-fast: false
+    
+    services:
+      selenium:
+        image: selenium/standalone-chrome:latest
+        ports:
+          - 4444:4444
+        options: --shm-size=2gb
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Install Chrome browser
+      uses: browser-actions/setup-chrome@latest
+      if: matrix.browser == 'chrome'
+
+    - name: Install Firefox browser
+      uses: browser-actions/setup-firefox@latest
+      if: matrix.browser == 'firefox'
+
+    - name: Set up environment variables
+      run: |
+        echo "TEST_ENV=${{ github.event.inputs.test_environment || 'dev' }}" >> $GITHUB_ENV
+        echo "BROWSER=${{ matrix.browser }}" >> $GITHUB_ENV
+        echo "HEADLESS=true" >> $GITHUB_ENV
+        echo "PYTEST_CURRENT_TEST=" >> $GITHUB_ENV
+
+    - name: Create reports directory
+      run: |
+        mkdir -p reports/allure-results
+        mkdir -p reports/screenshots
+        mkdir -p reports/coverage
+
+    - name: Run framework validation
+      run: |
+        python test_framework.py
+
+    - name: Run smoke tests
+      if: github.event.inputs.test_type == 'smoke' || github.event.inputs.test_type == 'all' || github.event.inputs.test_type == ''
+      run: |
+        pytest -m smoke --alluredir=reports/allure-results --html=reports/smoke-report.html --self-contained-html -v
+
+    - name: Run API tests
+      if: github.event.inputs.test_type == 'api' || github.event.inputs.test_type == 'all' || github.event.inputs.test_type == ''
+      run: |
+        pytest -m api --alluredir=reports/allure-results --html=reports/api-report.html --self-contained-html -v
+
+    - name: Run Web UI tests
+      if: github.event.inputs.test_type == 'web' || github.event.inputs.test_type == 'all' || github.event.inputs.test_type == ''
+      run: |
+        pytest -m web --alluredir=reports/allure-results --html=reports/web-report.html --self-contained-html -v
+
+    - name: Run all tests with coverage
+      if: github.event.inputs.test_type == 'all' || github.event.inputs.test_type == ''
+      run: |
+        pytest --cov=. --cov-report=html:reports/coverage --cov-report=xml --alluredir=reports/allure-results --html=reports/full-report.html --self-contained-html -v
+
+    - name: Generate Allure report
+      if: always()
+      uses: simple-elf/allure-report-action@master
+      with:
+        allure_results: reports/allure-results
+        allure_report: reports/allure-report
+        gh_pages: allure-report
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results-${{ matrix.python-version }}-${{ matrix.browser }}
+        path: |
+          reports/
+          !reports/allure-results/
+
+    - name: Upload coverage to Codecov
+      if: matrix.python-version == '3.10' && matrix.browser == 'chrome'
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+
+    - name: Publish test results
+      if: always()
+      uses: dorny/test-reporter@v1
+      with:
+        name: Test Results (${{ matrix.python-version }}, ${{ matrix.browser }})
+        path: reports/*.xml
+        reporter: java-junit
+
+    - name: Comment PR with test results
+      if: github.event_name == 'pull_request' && always()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+          
+          // 读取测试结果
+          let comment = '## 🧪 测试结果\n\n';
+          comment += `**Python版本**: ${{ matrix.python-version }}\n`;
+          comment += `**浏览器**: ${{ matrix.browser }}\n`;
+          comment += `**环境**: ${{ github.event.inputs.test_environment || 'dev' }}\n\n`;
+          
+          // 检查测试是否通过
+          const testStatus = '${{ job.status }}';
+          if (testStatus === 'success') {
+            comment += '✅ 所有测试通过\n';
+          } else {
+            comment += '❌ 测试失败\n';
+          }
+          
+          // 添加报告链接
+          comment += '\n### 📊 报告链接\n';
+          comment += `- [Allure报告](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n`;
+          comment += `- [覆盖率报告](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n`;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install security tools
+      run: |
+        pip install bandit safety
+
+    - name: Run Bandit security scan
+      run: |
+        bandit -r . -f json -o reports/bandit-report.json || true
+
+    - name: Run Safety check
+      run: |
+        safety check --json --output reports/safety-report.json || true
+
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-reports
+        path: reports/*-report.json
+
+  performance-test:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.test_type == 'all')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install locust
+
+    - name: Run performance tests
+      run: |
+        # 这里可以添加性能测试脚本
+        echo "Performance tests would run here"
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: [test, security-scan, performance-test]
+    if: always()
+    
+    steps:
+    - name: Notify Slack
+      if: env.SLACK_WEBHOOK_URL != ''
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#testing'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        fields: repo,message,commit,author,action,eventName,ref,workflow
+
+    - name: Send email notification
+      if: failure() && env.EMAIL_NOTIFICATION == 'true'
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: ${{ secrets.SMTP_SERVER }}
+        server_port: ${{ secrets.SMTP_PORT }}
+        username: ${{ secrets.SMTP_USERNAME }}
+        password: ${{ secrets.SMTP_PASSWORD }}
+        subject: "测试失败通知 - ${{ github.repository }}"
+        body: |
+          测试运行失败！
+          
+          仓库: ${{ github.repository }}
+          分支: ${{ github.ref }}
+          提交: ${{ github.sha }}
+          作者: ${{ github.actor }}
+          
+          请查看详细信息: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        to: ${{ secrets.NOTIFICATION_EMAIL }}
+        from: ${{ secrets.SMTP_USERNAME }}
+
+  cleanup:
+    runs-on: ubuntu-latest
+    needs: [test, security-scan, performance-test, notify]
+    if: always()
+    
+    steps:
+    - name: Cleanup old artifacts
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            run_id: context.runId,
+          });
+          
+          // 保留最近的10个artifact，删除其他的
+          const sortedArtifacts = artifacts.data.artifacts.sort((a, b) => 
+            new Date(b.created_at) - new Date(a.created_at)
+          );
+          
+          for (let i = 10; i < sortedArtifacts.length; i++) {
+            await github.rest.actions.deleteArtifact({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              artifact_id: sortedArtifacts[i].id,
+            });
+          }

@@ -3,22 +3,30 @@ environment: dev
 
 # API配置
 api:
-  base_url: "https://api-dev.example.com"
+  base_url: "https://api-dev.yourproject.com"  # 请替换为实际的开发环境API地址
   timeout: 30
   retry_count: 3
   retry_delay: 1
   headers:
     Content-Type: "application/json"
     Accept: "application/json"
+    User-Agent: "AutoTest/1.0"
   auth:
-    type: "bearer"  # bearer, basic, oauth2
-    token: ""
-    username: ""
-    password: ""
+    type: "bearer"  # bearer, basic, oauth2, api_key, jwt
+    token: ""  # 从环境变量 API_TOKEN 获取
+    username: ""  # 从环境变量 API_USERNAME 获取
+    password: ""  # 从环境变量 API_PASSWORD 获取
+    api_key: ""  # 从环境变量 API_KEY 获取
+    api_key_header: "X-API-Key"  # API Key 头部名称
+    jwt_secret: ""  # JWT 密钥，从环境变量 JWT_SECRET 获取
+  ssl_verify: true  # SSL证书验证
+  proxy:
+    http: ""  # HTTP代理，从环境变量 HTTP_PROXY 获取
+    https: ""  # HTTPS代理，从环境变量 HTTPS_PROXY 获取
 
 # Web UI配置
 web:
-  base_url: "https://dev.example.com"
+  base_url: "https://dev.yourproject.com"  # 请替换为实际的开发环境Web地址
   browser: "chrome"  # chrome, firefox, edge, safari
   headless: false
   window_size: "1920,1080"
@@ -26,14 +34,31 @@ web:
   explicit_wait: 30
   page_load_timeout: 60
   screenshot_on_failure: true
+  download_dir: "reports/downloads"  # 下载目录
+  browser_options:
+    chrome:
+      - "--no-sandbox"
+      - "--disable-dev-shm-usage"
+      - "--disable-gpu"
+      - "--disable-extensions"
+    firefox:
+      - "--width=1920"
+      - "--height=1080"
+  mobile_emulation:
+    enabled: false
+    device_name: "iPhone 12"  # 移动设备模拟
   
 # 数据库配置
 database:
-  host: "dev-db.example.com"
+  host: "dev-db.yourproject.com"  # 请替换为实际的数据库地址
   port: 5432
   name: "test_db"
-  username: "test_user"
-  password: "test_password"
+  username: "test_user"  # 从环境变量 DB_USERNAME 获取
+  password: "test_password"  # 从环境变量 DB_PASSWORD 获取
+  ssl_mode: "prefer"  # SSL连接模式
+  connection_timeout: 30
+  pool_size: 5
+  max_overflow: 10
   
 # 测试数据配置
 test_data:

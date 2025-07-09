@@ -1,0 +1,130 @@
+# 配置模板文件
+# 复制此文件并重命名为对应环境的配置文件（如dev.yaml, staging.yaml, prod.yaml）
+# 请根据实际项目需求修改以下配置
+
+environment: template  # 环境名称：dev/staging/prod
+
+# API配置
+api:
+  base_url: "https://api.yourproject.com"  # 请替换为实际的API地址
+  timeout: 30  # 请求超时时间（秒）
+  retry_count: 3  # 重试次数
+  retry_delay: 1  # 重试间隔（秒）
+  headers:
+    Content-Type: "application/json"
+    Accept: "application/json"
+    User-Agent: "AutoTest/1.0"
+  auth:
+    type: "bearer"  # 认证类型：bearer, basic, oauth2, api_key, jwt
+    token: ""  # Bearer Token，建议从环境变量 API_TOKEN 获取
+    username: ""  # 用户名，建议从环境变量 API_USERNAME 获取
+    password: ""  # 密码，建议从环境变量 API_PASSWORD 获取
+    api_key: ""  # API Key，建议从环境变量 API_KEY 获取
+    api_key_header: "X-API-Key"  # API Key 头部名称
+    jwt_secret: ""  # JWT 密钥，建议从环境变量 JWT_SECRET 获取
+  ssl_verify: true  # SSL证书验证
+  proxy:
+    http: ""  # HTTP代理，建议从环境变量 HTTP_PROXY 获取
+    https: ""  # HTTPS代理，建议从环境变量 HTTPS_PROXY 获取
+
+# Web UI配置
+web:
+  base_url: "https://yourproject.com"  # 请替换为实际的Web地址
+  browser: "chrome"  # 浏览器类型：chrome, firefox, edge, safari
+  headless: false  # 是否无头模式（生产环境建议设为true）
+  window_size: "1920,1080"  # 浏览器窗口大小
+  implicit_wait: 10  # 隐式等待时间（秒）
+  explicit_wait: 30  # 显式等待时间（秒）
+  page_load_timeout: 60  # 页面加载超时时间（秒）
+  screenshot_on_failure: true  # 失败时是否截图
+  download_dir: "reports/downloads"  # 下载目录
+  browser_options:
+    chrome:
+      - "--no-sandbox"
+      - "--disable-dev-shm-usage"
+      - "--disable-gpu"
+      - "--disable-extensions"
+    firefox:
+      - "--width=1920"
+      - "--height=1080"
+  mobile_emulation:
+    enabled: false  # 是否启用移动设备模拟
+    device_name: "iPhone 12"  # 移动设备名称
+
+# 数据库配置
+database:
+  host: "db.yourproject.com"  # 请替换为实际的数据库地址
+  port: 5432  # 数据库端口
+  name: "test_db"  # 数据库名称
+  username: "test_user"  # 用户名，建议从环境变量 DB_USERNAME 获取
+  password: "test_password"  # 密码，建议从环境变量 DB_PASSWORD 获取
+  ssl_mode: "prefer"  # SSL连接模式
+  connection_timeout: 30  # 连接超时时间（秒）
+  pool_size: 5  # 连接池大小
+  max_overflow: 10  # 最大溢出连接数
+
+# 测试数据配置
+test_data:
+  users:
+    admin:
+      username: "admin@yourproject.com"  # 管理员用户名
+      password: "admin123"  # 管理员密码
+    regular:
+      username: "user@yourproject.com"  # 普通用户名
+      password: "user123"  # 普通用户密码
+
+# 日志配置
+logging:
+  level: "INFO"  # 日志级别：DEBUG, INFO, WARNING, ERROR
+  format: "{time:YYYY-MM-DD HH:mm:ss} | {level} | {name}:{function}:{line} | {message}"
+  file: "reports/test.log"  # 日志文件路径
+  rotation: "10 MB"  # 日志轮转大小
+  retention: "7 days"  # 日志保留时间
+
+# 报告配置
+reporting:
+  allure:
+    results_dir: "reports/allure-results"  # Allure结果目录
+    report_dir: "reports/allure-report"  # Allure报告目录
+  html:
+    report_file: "reports/report.html"  # HTML报告文件
+
+# 并发配置
+concurrency:
+  max_workers: 4  # 最大并发数
+
+# 重试配置
+retry:
+  max_attempts: 3  # 最大重试次数
+  delay: 2  # 重试延迟（秒）
+
+# 邮件通知配置（可选）
+notification:
+  email:
+    enabled: false  # 是否启用邮件通知
+    smtp_server: "smtp.yourproject.com"  # SMTP服务器
+    smtp_port: 587  # SMTP端口
+    username: ""  # 邮箱用户名，建议从环境变量获取
+    password: ""  # 邮箱密码，建议从环境变量获取
+    from_email: "test@yourproject.com"  # 发件人邮箱
+    to_emails:  # 收件人邮箱列表
+      - "dev@yourproject.com"
+      - "qa@yourproject.com"
+  slack:
+    enabled: false  # 是否启用Slack通知
+    webhook_url: ""  # Slack Webhook URL，建议从环境变量获取
+    channel: "#testing"  # Slack频道
+
+# 性能测试配置（可选）
+performance:
+  enabled: false  # 是否启用性能测试
+  max_response_time: 5.0  # 最大响应时间（秒）
+  concurrent_users: 10  # 并发用户数
+  test_duration: 60  # 测试持续时间（秒）
+
+# 安全测试配置（可选）
+security:
+  enabled: false  # 是否启用安全测试
+  sql_injection_test: true  # SQL注入测试
+  xss_test: true  # XSS测试
+  csrf_test: true  # CSRF测试

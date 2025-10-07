@@ -1,7 +1,7 @@
 # Docker Compose 分布式测试配置
 # 支持多节点分布式测试执行
 
-version: '3.8'
+version: '3.2'
 
 services:
   # Redis - 分布式任务队列和协调

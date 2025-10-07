@@ -7,8 +7,8 @@ services:
   # 主测试服务（安全强化）
   test-runner-secure:
     build:
-      context: ..
-      dockerfile: ../Dockerfile.secure
+      context: .
+      dockerfile: Dockerfile.secure
       target: production
     container_name: argus-test-runner-secure
     restart: unless-stopped

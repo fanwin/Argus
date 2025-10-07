@@ -1,7 +1,8 @@
 # Docker Compose 分布式测试配置
 # 支持多节点分布式测试执行
+# 兼容 Docker Compose v2.x
 
-version: '3.2'
+version: '2.4'
 
 services:
   # Redis - 分布式任务队列和协调
@@ -21,22 +22,14 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 10s
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 1G
-        reservations:
-          cpus: '0.25'
-          memory: 256M
+    mem_limit: 1g
+    cpus: 1.0
 
   # 分布式测试控制器
   test-controller:
     build:
       context: .
       dockerfile: Dockerfile
-      target: runtime
     container_name: argus-test-controller
     environment:
       - TEST_ENV=${TEST_ENV:-dev}
@@ -60,21 +53,14 @@ services:
         --env ${TEST_ENV:-dev}
         --type ${TEST_TYPE:-all}
         --timeout ${TIMEOUT:-3600}
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 1G
-        reservations:
-          cpus: '0.25'
-          memory: 256M
+    mem_limit: 1g
+    cpus: 1.0
 
   # 分布式测试工作节点 1
   test-worker-1:
     build:
       context: .
       dockerfile: Dockerfile
-      target: runtime
     container_name: argus-test-worker-1
     environment:
       - TEST_ENV=${TEST_ENV:-dev}
@@ -105,21 +91,14 @@ services:
         --mode worker
         --env ${TEST_ENV:-dev}
     restart: on-failure
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
+    mem_limit: 2g
+    cpus: 2.0
 
   # 分布式测试工作节点 2
   test-worker-2:
     build:
       context: .
       dockerfile: Dockerfile
-      target: runtime
     container_name: argus-test-worker-2
     environment:
       - TEST_ENV=${TEST_ENV:-dev}
@@ -150,21 +129,14 @@ services:
         --mode worker
         --env ${TEST_ENV:-dev}
     restart: on-failure
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
+    mem_limit: 2g
+    cpus: 2.0
 
   # 分布式测试工作节点 3
   test-worker-3:
     build:
       context: .
       dockerfile: Dockerfile
-      target: runtime
     container_name: argus-test-worker-3
     environment:
       - TEST_ENV=${TEST_ENV:-dev}
@@ -195,14 +167,8 @@ services:
         --mode worker
         --env ${TEST_ENV:-dev}
     restart: on-failure
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
+    mem_limit: 2g
+    cpus: 2.0
 
   # Selenium Grid Hub
   selenium-hub:
@@ -226,15 +192,8 @@ services:
       interval: 15s
       timeout: 10s
       retries: 3
-      start_period: 30s
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
+    mem_limit: 2g
+    cpus: 2.0
 
   # Chrome节点 - 多实例
   chrome-node:
@@ -260,15 +219,8 @@ services:
     depends_on:
       selenium-hub:
         condition: service_healthy
-    deploy:
-      replicas: 2
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
+    mem_limit: 2g
+    cpus: 2.0
 
   # Firefox节点 - 多实例
   firefox-node:
@@ -294,15 +246,8 @@ services:
     depends_on:
       selenium-hub:
         condition: service_healthy
-    deploy:
-      replicas: 2
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
+    mem_limit: 2g
+    cpus: 2.0
 
   # Allure报告服务
   allure-server:
@@ -339,9 +284,6 @@ services:
 networks:
   distributed-network:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.25.0.0/16
 
 volumes:
   redis_data:

@@ -1,0 +1,349 @@
+# Docker Compose 分布式测试配置
+# 支持多节点分布式测试执行
+
+version: '3.8'
+
+services:
+  # Redis - 分布式任务队列和协调
+  redis:
+    image: redis:7-alpine
+    container_name: argus-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - distributed-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # 分布式测试控制器
+  test-controller:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: argus-test-controller
+    environment:
+      - TEST_ENV=${TEST_ENV:-dev}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - PYTHONPATH=/app
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./reports:/app/reports
+      - ./configs:/app/configs:ro
+      - ./data:/app/data
+    networks:
+      - distributed-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: >
+      python run_distributed_tests.py
+        --mode controller
+        --env ${TEST_ENV:-dev}
+        --type ${TEST_TYPE:-all}
+        --timeout ${TIMEOUT:-3600}
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # 分布式测试工作节点 1
+  test-worker-1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: argus-test-worker-1
+    environment:
+      - TEST_ENV=${TEST_ENV:-dev}
+      - BROWSER=${BROWSER:-chrome}
+      - HEADLESS=${HEADLESS:-true}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - SELENIUM_REMOTE_URL=http://selenium-hub:4444/wd/hub
+      - SELENIUM_REMOTE_ENABLED=true
+      - DISPLAY=:99
+      - PYTHONPATH=/app
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./reports:/app/reports
+      - ./configs:/app/configs:ro
+      - ./data:/app/data
+      - /dev/shm:/dev/shm
+    networks:
+      - distributed-network
+    depends_on:
+      redis:
+        condition: service_healthy
+      selenium-hub:
+        condition: service_healthy
+    command: >
+      python run_distributed_tests.py
+        --mode worker
+        --env ${TEST_ENV:-dev}
+    restart: on-failure
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # 分布式测试工作节点 2
+  test-worker-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: argus-test-worker-2
+    environment:
+      - TEST_ENV=${TEST_ENV:-dev}
+      - BROWSER=${BROWSER:-chrome}
+      - HEADLESS=${HEADLESS:-true}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - SELENIUM_REMOTE_URL=http://selenium-hub:4444/wd/hub
+      - SELENIUM_REMOTE_ENABLED=true
+      - DISPLAY=:99
+      - PYTHONPATH=/app
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./reports:/app/reports
+      - ./configs:/app/configs:ro
+      - ./data:/app/data
+      - /dev/shm:/dev/shm
+    networks:
+      - distributed-network
+    depends_on:
+      redis:
+        condition: service_healthy
+      selenium-hub:
+        condition: service_healthy
+    command: >
+      python run_distributed_tests.py
+        --mode worker
+        --env ${TEST_ENV:-dev}
+    restart: on-failure
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # 分布式测试工作节点 3
+  test-worker-3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: argus-test-worker-3
+    environment:
+      - TEST_ENV=${TEST_ENV:-dev}
+      - BROWSER=${BROWSER:-firefox}
+      - HEADLESS=${HEADLESS:-true}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - SELENIUM_REMOTE_URL=http://selenium-hub:4444/wd/hub
+      - SELENIUM_REMOTE_ENABLED=true
+      - DISPLAY=:99
+      - PYTHONPATH=/app
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./reports:/app/reports
+      - ./configs:/app/configs:ro
+      - ./data:/app/data
+      - /dev/shm:/dev/shm
+    networks:
+      - distributed-network
+    depends_on:
+      redis:
+        condition: service_healthy
+      selenium-hub:
+        condition: service_healthy
+    command: >
+      python run_distributed_tests.py
+        --mode worker
+        --env ${TEST_ENV:-dev}
+    restart: on-failure
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Selenium Grid Hub
+  selenium-hub:
+    image: selenium/hub:4.15.0
+    container_name: selenium-hub-distributed
+    restart: unless-stopped
+    ports:
+      - "4444:4444"
+      - "4442:4442"
+      - "4443:4443"
+    environment:
+      - GRID_MAX_SESSION=32
+      - GRID_BROWSER_TIMEOUT=300
+      - GRID_TIMEOUT=300
+      - GRID_NEW_SESSION_WAIT_TIMEOUT=10
+      - TZ=Asia/Shanghai
+    networks:
+      - distributed-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4444/wd/hub/status"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Chrome节点 - 多实例
+  chrome-node:
+    image: selenium/node-chrome:4.15.0
+    container_name: chrome-node-distributed
+    restart: unless-stopped
+    shm_size: 2gb
+    environment:
+      - HUB_HOST=selenium-hub
+      - HUB_PORT=4444
+      - NODE_MAX_INSTANCES=8
+      - NODE_MAX_SESSION=8
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_NODE_SESSION_TIMEOUT=300
+      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
+      - TZ=Asia/Shanghai
+    volumes:
+      - /dev/shm:/dev/shm
+    networks:
+      - distributed-network
+    depends_on:
+      selenium-hub:
+        condition: service_healthy
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Firefox节点 - 多实例
+  firefox-node:
+    image: selenium/node-firefox:4.15.0
+    container_name: firefox-node-distributed
+    restart: unless-stopped
+    shm_size: 2gb
+    environment:
+      - HUB_HOST=selenium-hub
+      - HUB_PORT=4444
+      - NODE_MAX_INSTANCES=8
+      - NODE_MAX_SESSION=8
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_NODE_SESSION_TIMEOUT=300
+      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
+      - TZ=Asia/Shanghai
+    volumes:
+      - /dev/shm:/dev/shm
+    networks:
+      - distributed-network
+    depends_on:
+      selenium-hub:
+        condition: service_healthy
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Allure报告服务
+  allure-server:
+    image: frankescobar/allure-docker-service:2.24.0
+    container_name: allure-server-distributed
+    restart: unless-stopped
+    ports:
+      - "5050:5050"
+    environment:
+      - CHECK_RESULTS_EVERY_SECONDS=3
+      - KEEP_HISTORY=1
+      - KEEP_HISTORY_LATEST=25
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./reports/allure-results:/app/allure-results
+      - ./reports/allure-report:/app/default-reports
+    networks:
+      - distributed-network
+
+  # 监控面板
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: redis-commander
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    networks:
+      - distributed-network
+    depends_on:
+      - redis
+
+networks:
+  distributed-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+
+volumes:
+  redis_data:
+    driver: local
+

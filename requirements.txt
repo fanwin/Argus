@@ -31,3 +31,7 @@ faker>=19.0.0
 # Utilities
 pillow>=10.0.0  # 截图处理
 python-dateutil>=2.8.0
+
+# Distributed testing
+redis>=5.0.0  # Redis客户端
+hiredis>=2.2.0  # Redis高性能解析器

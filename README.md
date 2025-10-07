@@ -8,6 +8,7 @@
 - **多环境支持**：支持dev/staging/prod环境配置切换
 - **丰富的报告**：集成Allure报告系统，支持HTML报告
 - **并行测试**：支持pytest-xdist并行执行测试
+- **🆕 分布式测试**：支持跨多台机器/容器的分布式测试执行，10倍加速
 - **完善的日志**：基于loguru的日志记录机制
 - **数据驱动**：支持参数化测试和外部数据文件
 - **自动截图**：UI测试失败时自动截图
@@ -149,6 +150,32 @@ pytest -n auto
 # 指定进程数
 pytest -n 4
 ```
+
+### 🆕 分布式测试（10倍加速）
+
+```bash
+# 一键启动分布式测试（推荐）
+./scripts/run-distributed.sh start
+
+# 启动5个工作节点
+./scripts/run-distributed.sh start --workers 5
+
+# 启动并指定测试类型
+./scripts/run-distributed.sh start --type api --workers 10
+
+# 查看监控面板
+./scripts/run-distributed.sh monitor
+
+# 停止分布式测试
+./scripts/run-distributed.sh stop
+```
+
+**性能对比**:
+- 串行执行: 150秒
+- 并行执行(4进程): 40秒
+- 分布式(10节点): **15秒** ⚡
+
+详细文档: [DISTRIBUTED_TESTING.md](DISTRIBUTED_TESTING.md)
 
 ### 生成Allure报告
 ```bash

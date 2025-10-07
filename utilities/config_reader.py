@@ -106,6 +106,17 @@ class ConfigReader:
         if window_size := os.getenv("WINDOW_SIZE"):
             config.setdefault("web", {})["window_size"] = window_size
 
+        # 远程WebDriver覆盖
+        if remote_url := os.getenv("SELENIUM_REMOTE_URL"):
+            web_remote = config.setdefault("web", {}).setdefault("remote", {})
+            web_remote["remote_url"] = remote_url
+            # 若设置了URL，默认启用远程
+            web_remote.setdefault("enabled", True)
+
+        if remote_enabled := os.getenv("SELENIUM_REMOTE_ENABLED"):
+            web_remote = config.setdefault("web", {}).setdefault("remote", {})
+            web_remote["enabled"] = remote_enabled.lower() == "true"
+
         # 数据库配置覆盖
         if db_host := os.getenv("DB_HOST"):
             config.setdefault("database", {})["host"] = db_host
@@ -163,12 +174,6 @@ class ConfigReader:
         except Exception as e:
             log.error(f"配置验证失败: {e}")
             return False
-            
-        if db_user := os.getenv("DB_USER"):
-            config.setdefault("database", {})["username"] = db_user
-            
-        if db_password := os.getenv("DB_PASSWORD"):
-            config.setdefault("database", {})["password"] = db_password
     
     def get_config(self) -> Optional[Dict[str, Any]]:
         """获取当前配置"""

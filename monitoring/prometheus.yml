@@ -1,0 +1,131 @@
+# Prometheus配置文件
+# 用于监控测试框架和相关服务的性能指标
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'argus-testing-framework'
+    environment: 'docker'
+
+# 规则文件
+rule_files:
+  - "rules/*.yml"
+
+# 告警管理器配置
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+# 抓取配置
+scrape_configs:
+  # Prometheus自身监控
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 5s
+    metrics_path: /metrics
+
+  # 测试框架应用监控
+  - job_name: 'test-runner'
+    static_configs:
+      - targets: ['test-runner:8000']
+    scrape_interval: 10s
+    metrics_path: /metrics
+    scrape_timeout: 5s
+
+  # Selenium Grid Hub监控
+  - job_name: 'selenium-hub'
+    static_configs:
+      - targets: ['selenium-hub:4444']
+    scrape_interval: 15s
+    metrics_path: /status
+    scrape_timeout: 10s
+
+  # Chrome节点监控
+  - job_name: 'chrome-node'
+    static_configs:
+      - targets: ['chrome-node:5555']
+    scrape_interval: 15s
+    metrics_path: /status
+    scrape_timeout: 10s
+
+  # Firefox节点监控
+  - job_name: 'firefox-node'
+    static_configs:
+      - targets: ['firefox-node:5555']
+    scrape_interval: 15s
+    metrics_path: /status
+    scrape_timeout: 10s
+
+  # Edge节点监控
+  - job_name: 'edge-node'
+    static_configs:
+      - targets: ['edge-node:5555']
+    scrape_interval: 15s
+    metrics_path: /status
+    scrape_timeout: 10s
+
+  # PostgreSQL数据库监控
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 30s
+
+  # Redis监控
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 30s
+
+  # Nginx文件服务器监控
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['file-server:80']
+    scrape_interval: 30s
+    metrics_path: /nginx_status
+
+  # Elasticsearch监控
+  - job_name: 'elasticsearch'
+    static_configs:
+      - targets: ['elasticsearch:9200']
+    scrape_interval: 30s
+    metrics_path: /_prometheus/metrics
+
+  # Grafana监控
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # Docker容器监控
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # 节点监控（主机系统）
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s
+
+  # Allure报告服务监控
+  - job_name: 'allure-server'
+    static_configs:
+      - targets: ['allure-server:5050']
+    scrape_interval: 60s
+    metrics_path: /metrics
+    scrape_timeout: 30s
+
+# 远程写入配置（可选）
+# remote_write:
+#   - url: "http://remote-prometheus:9090/api/v1/write"
+
+# 远程读取配置（可选）
+# remote_read:
+#   - url: "http://remote-prometheus:9090/api/v1/read"

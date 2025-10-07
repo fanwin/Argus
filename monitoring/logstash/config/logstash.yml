@@ -1,0 +1,36 @@
+# Logstash主配置文件
+
+# 节点名称
+node.name: logstash-docker
+
+# 数据路径
+path.data: /usr/share/logstash/data
+
+# 管道配置
+pipeline.workers: 2
+pipeline.batch.size: 125
+pipeline.batch.delay: 50
+
+# 队列配置
+queue.type: memory
+queue.max_bytes: 1gb
+
+# 日志配置
+log.level: info
+path.logs: /usr/share/logstash/logs
+
+# 监控配置
+monitoring.enabled: true
+monitoring.elasticsearch.hosts: ["http://elasticsearch:9200"]
+
+# HTTP API配置
+http.host: "0.0.0.0"
+http.port: 9600
+
+# 配置重载
+config.reload.automatic: true
+config.reload.interval: 3s
+
+# 死信队列
+dead_letter_queue.enable: true
+dead_letter_queue.max_bytes: 1gb

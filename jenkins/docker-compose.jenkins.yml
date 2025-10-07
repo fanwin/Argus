@@ -1,0 +1,299 @@
+version: '3.8'
+
+# Jenkins专用Docker Compose配置
+# 用于快速搭建Jenkins + 测试环境
+
+services:
+  # Jenkins主服务
+  jenkins:
+    image: jenkins/jenkins:2.426.1-lts
+    container_name: jenkins-master
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    environment:
+      - JENKINS_OPTS=--httpPort=8080
+      - JAVA_OPTS=-Xmx2048m -Djenkins.install.runSetupWizard=false
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./jenkins/plugins.txt:/usr/share/jenkins/ref/plugins.txt
+      - ./jenkins/jenkins-config.groovy:/usr/share/jenkins/ref/init.groovy.d/jenkins-config.groovy
+      - ./jenkins/casc.yaml:/var/jenkins_home/casc_configs/jenkins.yaml
+    networks:
+      - jenkins-network
+    depends_on:
+      - jenkins-agent
+      - selenium-hub
+
+  # Jenkins Agent (用于运行测试)
+  jenkins-agent:
+    build:
+      context: .
+      dockerfile: jenkins/Dockerfile.agent
+    container_name: jenkins-agent
+    restart: unless-stopped
+    environment:
+      - JENKINS_URL=http://jenkins:8080
+      - JENKINS_AGENT_NAME=test-agent
+      - JENKINS_SECRET=${JENKINS_AGENT_SECRET:-}
+      - JENKINS_AGENT_WORKDIR=/home/jenkins/agent
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - jenkins_agent_workdir:/home/jenkins/agent
+      - ./:/workspace
+    networks:
+      - jenkins-network
+    depends_on:
+      - selenium-hub
+
+  # Selenium Grid Hub
+  selenium-hub:
+    image: selenium/hub:4.15.0
+    container_name: selenium-hub-jenkins
+    restart: unless-stopped
+    ports:
+      - "4444:4444"
+      - "4442:4442"
+      - "4443:4443"
+    environment:
+      - GRID_MAX_SESSION=16
+      - GRID_BROWSER_TIMEOUT=300
+      - GRID_TIMEOUT=300
+      - GRID_NEW_SESSION_WAIT_TIMEOUT=10
+    networks:
+      - jenkins-network
+
+  # Chrome节点
+  chrome-node:
+    image: selenium/node-chrome:4.15.0
+    container_name: chrome-node-jenkins
+    restart: unless-stopped
+    shm_size: 2gb
+    environment:
+      - HUB_HOST=selenium-hub
+      - HUB_PORT=4444
+      - NODE_MAX_INSTANCES=4
+      - NODE_MAX_SESSION=4
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+    volumes:
+      - /dev/shm:/dev/shm
+    networks:
+      - jenkins-network
+    depends_on:
+      - selenium-hub
+
+  # Firefox节点
+  firefox-node:
+    image: selenium/node-firefox:4.15.0
+    container_name: firefox-node-jenkins
+    restart: unless-stopped
+    shm_size: 2gb
+    environment:
+      - HUB_HOST=selenium-hub
+      - HUB_PORT=4444
+      - NODE_MAX_INSTANCES=4
+      - NODE_MAX_SESSION=4
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+    volumes:
+      - /dev/shm:/dev/shm
+    networks:
+      - jenkins-network
+    depends_on:
+      - selenium-hub
+
+  # Allure报告服务
+  allure-server:
+    image: frankescobar/allure-docker-service:2.24.0
+    container_name: allure-server-jenkins
+    restart: unless-stopped
+    ports:
+      - "5050:5050"
+    environment:
+      - CHECK_RESULTS_EVERY_SECONDS=3
+      - KEEP_HISTORY=1
+      - KEEP_HISTORY_LATEST=25
+      - ALLURE_DOCKER_PUBLIC_API_URL=http://localhost:5050
+      - ALLURE_DOCKER_PUBLIC_API_URL_PREFIX=/allure-docker-service
+    volumes:
+      - allure_results:/app/allure-results
+      - allure_reports:/app/default-reports
+    networks:
+      - jenkins-network
+
+  # PostgreSQL数据库 (用于Jenkins和测试数据)
+  postgres:
+    image: postgres:15
+    container_name: postgres-jenkins
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=jenkins
+      - POSTGRES_USER=jenkins
+      - POSTGRES_PASSWORD=jenkins123
+      - POSTGRES_MULTIPLE_DATABASES=testdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./jenkins/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
+    networks:
+      - jenkins-network
+
+  # Redis (用于缓存和会话存储)
+  redis:
+    image: redis:7-alpine
+    container_name: redis-jenkins
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass redis123
+    volumes:
+      - redis_data:/data
+    networks:
+      - jenkins-network
+
+  # Nginx (反向代理)
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-jenkins
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./jenkins/nginx.conf:/etc/nginx/nginx.conf
+      - ./jenkins/ssl:/etc/nginx/ssl
+      - nginx_logs:/var/log/nginx
+    networks:
+      - jenkins-network
+    depends_on:
+      - jenkins
+      - allure-server
+
+  # Prometheus监控
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus-jenkins
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./jenkins/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - jenkins-network
+
+  # Grafana仪表板
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana-jenkins
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./jenkins/grafana/provisioning:/etc/grafana/provisioning
+      - ./jenkins/grafana/dashboards:/var/lib/grafana/dashboards
+    networks:
+      - jenkins-network
+    depends_on:
+      - prometheus
+
+  # SonarQube代码质量分析
+  sonarqube:
+    image: sonarqube:community
+    container_name: sonarqube-jenkins
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    environment:
+      - SONAR_JDBC_URL=jdbc:postgresql://postgres:5432/sonarqube
+      - SONAR_JDBC_USERNAME=jenkins
+      - SONAR_JDBC_PASSWORD=jenkins123
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    networks:
+      - jenkins-network
+    depends_on:
+      - postgres
+
+  # Portainer容器管理
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer-jenkins
+    restart: unless-stopped
+    ports:
+      - "9443:9443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    networks:
+      - jenkins-network
+
+  # 文件服务器 (用于存储测试文件和报告)
+  file-server:
+    image: nginx:alpine
+    container_name: file-server-jenkins
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    volumes:
+      - ./test-files:/usr/share/nginx/html/files
+      - ./reports:/usr/share/nginx/html/reports
+      - ./jenkins/file-server.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - jenkins-network
+
+networks:
+  jenkins-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  jenkins_home:
+    driver: local
+  jenkins_agent_workdir:
+    driver: local
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  allure_results:
+    driver: local
+  allure_reports:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  sonarqube_data:
+    driver: local
+  sonarqube_extensions:
+    driver: local
+  sonarqube_logs:
+    driver: local
+  portainer_data:
+    driver: local
+  nginx_logs:
+    driver: local

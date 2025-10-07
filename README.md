@@ -105,6 +105,15 @@ brew install allure
 
 ## 🚀 快速开始
 
+### 运行示例测试
+```bash
+# 运行所有示例测试
+pytest examples/ -m sample -v
+
+# 运行综合示例
+pytest examples/comprehensive_example.py -v
+```
+
 ### 运行所有测试
 ```bash
 pytest
@@ -317,6 +326,9 @@ python run_tests.py --type api --parallel --env staging
 
 # 只运行框架验证
 python run_tests.py --validate
+
+# 运行示例测试
+python examples/run_sample_tests.py
 
 # 生成Allure报告
 python run_tests.py --report

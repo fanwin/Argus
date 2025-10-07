@@ -69,6 +69,7 @@ class SeleniumWrapper:
             self.explicit_wait = web_config.get("explicit_wait", 30)
             self.page_load_timeout = web_config.get("page_load_timeout", 60)
             self.screenshot_on_failure = web_config.get("screenshot_on_failure", True)
+            self.remote_config = web_config.get("remote", {"enabled": False})
 
             self._initialized = True
             log.info(f"Selenium封装初始化完成，浏览器: {self.browser}, 无头模式: {self.headless}")
@@ -82,6 +83,7 @@ class SeleniumWrapper:
             self.explicit_wait = 30
             self.page_load_timeout = 60
             self.screenshot_on_failure = True
+            self.remote_config = {"enabled": False}
 
             self._initialized = True
             log.debug("Selenium封装使用默认配置初始化")
@@ -92,14 +94,18 @@ class SeleniumWrapper:
         self._initialize_config()
 
         try:
-            if self.browser.lower() == "chrome":
-                self.driver = self._create_chrome_driver()
-            elif self.browser.lower() == "firefox":
-                self.driver = self._create_firefox_driver()
-            elif self.browser.lower() == "edge":
-                self.driver = self._create_edge_driver()
+            # 优先根据配置选择远程或本地驱动
+            if self.remote_config and self.remote_config.get("enabled") and self.remote_config.get("remote_url"):
+                self.driver = self._create_remote_driver(self.browser, self.remote_config.get("remote_url"))
             else:
-                raise ValueError(f"不支持的浏览器类型: {self.browser}")
+                if self.browser.lower() == "chrome":
+                    self.driver = self._create_chrome_driver()
+                elif self.browser.lower() == "firefox":
+                    self.driver = self._create_firefox_driver()
+                elif self.browser.lower() == "edge":
+                    self.driver = self._create_edge_driver()
+                else:
+                    raise ValueError(f"不支持的浏览器类型: {self.browser}")
             
             # 设置等待和超时
             self.driver.implicitly_wait(self.implicit_wait)
@@ -157,6 +163,36 @@ class SeleniumWrapper:
         service = EdgeService(EdgeChromiumDriverManager().install())
         return webdriver.Edge(service=service, options=options)
     
+    def _create_remote_driver(self, browser: str, remote_url: str):
+        """创建远程驱动（Selenium Grid）"""
+        browser_lower = browser.lower()
+
+        if browser_lower == "chrome":
+            options = webdriver.ChromeOptions()
+            if self.headless:
+                options.add_argument("--headless")
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-dev-shm-usage")
+            options.add_argument("--disable-gpu")
+            options.add_argument("--disable-extensions")
+            return webdriver.Remote(command_executor=remote_url, options=options)
+
+        if browser_lower == "firefox":
+            options = webdriver.FirefoxOptions()
+            if self.headless:
+                options.add_argument("--headless")
+            return webdriver.Remote(command_executor=remote_url, options=options)
+
+        if browser_lower == "edge":
+            options = webdriver.EdgeOptions()
+            if self.headless:
+                options.add_argument("--headless")
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-dev-shm-usage")
+            return webdriver.Remote(command_executor=remote_url, options=options)
+
+        raise ValueError(f"不支持的浏览器类型(远程): {browser}")
+
     def quit_driver(self):
         """退出浏览器驱动"""
         if self.driver:

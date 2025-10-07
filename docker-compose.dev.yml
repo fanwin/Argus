@@ -1,0 +1,280 @@
+# Docker Compose开发环境配置
+# 支持热重载、调试和开发工具
+
+version: '3.8'
+
+services:
+  # 开发环境测试服务
+  test-runner-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: development
+    container_name: argus-test-runner-dev
+    restart: unless-stopped
+    environment:
+      - TEST_ENV=dev
+      - BROWSER=${BROWSER:-chrome}
+      - HEADLESS=${HEADLESS:-false}
+      - DISPLAY=:99
+      - PYTHONPATH=/app
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+      - DEBUG=true
+      - HOT_RELOAD=true
+      - TZ=Asia/Shanghai
+    volumes:
+      # 源代码热重载
+      - .:/app
+      - ./reports:/app/reports
+      - ./configs:/app/configs:ro
+      - ./data:/app/data
+      - /dev/shm:/dev/shm
+      # 开发工具
+      - dev-cache:/app/.cache
+      - dev-vscode:/app/.vscode-server
+    ports:
+      - "8000:8000"  # 调试端口
+      - "5678:5678"  # Python调试端口
+    networks:
+      - test-network
+    depends_on:
+      selenium-hub-dev:
+        condition: service_healthy
+    command: >
+      bash -c "
+        echo 'Starting development environment...'
+        pip install -e .
+        python -m debugpy --listen 0.0.0.0:5678 --wait-for-client test_framework.py
+      "
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+
+  # 开发环境Selenium Hub
+  selenium-hub-dev:
+    image: selenium/hub:4.15.0
+    container_name: selenium-hub-dev
+    restart: unless-stopped
+    ports:
+      - "4444:4444"
+      - "4442:4442"
+      - "4443:4443"
+    environment:
+      - GRID_MAX_SESSION=8
+      - GRID_BROWSER_TIMEOUT=600
+      - GRID_TIMEOUT=600
+      - GRID_NEW_SESSION_WAIT_TIMEOUT=30
+      - GRID_SESSION_RETRY_INTERVAL=5
+      - SE_OPTS=--log-level INFO
+      - TZ=Asia/Shanghai
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4444/wd/hub/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # 开发环境Chrome节点（支持调试）
+  chrome-node-dev:
+    image: selenium/node-chrome:4.15.0
+    container_name: chrome-node-dev
+    restart: unless-stopped
+    shm_size: 2gb
+    environment:
+      - HUB_HOST=selenium-hub-dev
+      - HUB_PORT=4444
+      - NODE_MAX_INSTANCES=2
+      - NODE_MAX_SESSION=2
+      - SE_EVENT_BUS_HOST=selenium-hub-dev
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_NODE_SESSION_TIMEOUT=600
+      - SE_OPTS=--log-level INFO
+      - TZ=Asia/Shanghai
+    volumes:
+      - /dev/shm:/dev/shm
+    ports:
+      - "5900:5900"  # VNC端口用于调试
+    networks:
+      - test-network
+    depends_on:
+      selenium-hub-dev:
+        condition: service_healthy
+
+  # 开发数据库（轻量级）
+  postgres-dev:
+    image: postgres:15-alpine
+    container_name: postgres-dev
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=test_db_dev
+      - POSTGRES_USER=dev_user
+      - POSTGRES_PASSWORD=dev_password
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8
+      - TZ=Asia/Shanghai
+    ports:
+      - "5433:5432"  # 避免与主数据库冲突
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev_user -d test_db_dev"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # 开发Redis
+  redis-dev:
+    image: redis:7-alpine
+    container_name: redis-dev
+    restart: unless-stopped
+    ports:
+      - "6380:6379"  # 避免与主Redis冲突
+    command: redis-server --appendonly yes --maxmemory 128mb
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # 开发环境文件服务器
+  file-server-dev:
+    image: nginx:alpine
+    container_name: file-server-dev
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    volumes:
+      - ./test-files:/usr/share/nginx/html
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - test-network
+
+  # 开发工具容器
+  dev-tools:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: dev-tools
+    container_name: argus-dev-tools
+    restart: unless-stopped
+    environment:
+      - PYTHONPATH=/app
+      - TZ=Asia/Shanghai
+    volumes:
+      - .:/app
+      - dev-cache:/app/.cache
+      - dev-jupyter:/root/.jupyter
+    ports:
+      - "8888:8888"  # Jupyter Notebook
+      - "8080:8080"  # 其他开发工具
+    networks:
+      - test-network
+    command: >
+      bash -c "
+        echo 'Starting development tools...'
+        jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''
+      "
+
+  # 代码质量检查
+  code-quality:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: code-quality
+    container_name: argus-code-quality
+    environment:
+      - PYTHONPATH=/app
+    volumes:
+      - .:/app
+      - ./reports:/app/reports
+    networks:
+      - test-network
+    command: >
+      bash -c "
+        echo 'Running code quality checks...'
+        flake8 --output-file=reports/flake8-report.txt .
+        pylint --output-format=text . > reports/pylint-report.txt || true
+        bandit -r . -f json -o reports/bandit-report.json || true
+        safety check --json --output reports/safety-report.json || true
+        echo 'Code quality checks completed'
+      "
+
+  # 测试覆盖率服务
+  coverage-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: development
+    container_name: argus-coverage-server
+    environment:
+      - PYTHONPATH=/app
+    volumes:
+      - .:/app
+      - ./reports:/app/reports
+    ports:
+      - "8082:8000"
+    networks:
+      - test-network
+    command: >
+      bash -c "
+        echo 'Starting coverage server...'
+        cd reports/coverage
+        python -m http.server 8000
+      "
+
+  # API Mock服务
+  api-mock:
+    image: mockserver/mockserver:latest
+    container_name: api-mock-server
+    restart: unless-stopped
+    ports:
+      - "1080:1080"
+    environment:
+      - MOCKSERVER_LOG_LEVEL=INFO
+      - MOCKSERVER_SERVER_PORT=1080
+    volumes:
+      - ./dev-tools/mock-data:/config
+    networks:
+      - test-network
+
+networks:
+  test-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  postgres_dev_data:
+    driver: local
+  redis_dev_data:
+    driver: local
+  dev-cache:
+    driver: local
+  dev-vscode:
+    driver: local
+  dev-jupyter:
+    driver: local

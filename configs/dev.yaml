@@ -34,6 +34,9 @@ web:
   explicit_wait: 30
   page_load_timeout: 60
   screenshot_on_failure: true
+  remote:
+    enabled: false
+    remote_url: "http://selenium-hub:4444/wd/hub"  # 使用docker-compose里的hub时可启用
   download_dir: "reports/downloads"  # 下载目录
   browser_options:
     chrome:

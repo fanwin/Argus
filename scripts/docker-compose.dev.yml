@@ -7,8 +7,8 @@ services:
   # 开发环境测试服务
   test-runner-dev:
     build:
-      context: .
-      dockerfile: Dockerfile.dev
+      context: ..
+      dockerfile: ../Dockerfile.dev
       target: development
     container_name: argus-test-runner-dev
     restart: unless-stopped
@@ -175,8 +175,8 @@ services:
   # 开发工具容器
   dev-tools:
     build:
-      context: .
-      dockerfile: Dockerfile.dev
+      context: ..
+      dockerfile: ../Dockerfile.dev
       target: dev-tools
     container_name: argus-dev-tools
     restart: unless-stopped
@@ -201,8 +201,8 @@ services:
   # 代码质量检查
   code-quality:
     build:
-      context: .
-      dockerfile: Dockerfile.dev
+      context: ..
+      dockerfile: ../Dockerfile.dev
       target: code-quality
     container_name: argus-code-quality
     environment:
@@ -225,8 +225,8 @@ services:
   # 测试覆盖率服务
   coverage-server:
     build:
-      context: .
-      dockerfile: Dockerfile.dev
+      context: ..
+      dockerfile: ../Dockerfile.dev
       target: development
     container_name: argus-coverage-server
     environment:

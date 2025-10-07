@@ -7,8 +7,8 @@ services:
   # 主测试服务（安全强化）
   test-runner-secure:
     build:
-      context: .
-      dockerfile: Dockerfile.secure
+      context: ..
+      dockerfile: ../Dockerfile.secure
       target: production
     container_name: argus-test-runner-secure
     restart: unless-stopped
@@ -382,10 +382,10 @@ volumes:
 # 密钥管理
 secrets:
   postgres_db:
-    file: ./secrets/postgres_db.txt
+    file: ../secrets/postgres_db.txt
   postgres_user:
-    file: ./secrets/postgres_user.txt
+    file: ../secrets/postgres_user.txt
   postgres_password:
-    file: ./secrets/postgres_password.txt
+    file: ../secrets/postgres_password.txt
   redis_password:
-    file: ./secrets/redis_password.txt
+    file: ../secrets/redis_password.txt

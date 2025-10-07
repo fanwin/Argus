@@ -34,8 +34,8 @@ services:
   # 分布式测试控制器
   test-controller:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: ../Dockerfile
       target: runtime
     container_name: argus-test-controller
     environment:
@@ -72,8 +72,8 @@ services:
   # 分布式测试工作节点 1
   test-worker-1:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: ../Dockerfile
       target: runtime
     container_name: argus-test-worker-1
     environment:
@@ -117,8 +117,8 @@ services:
   # 分布式测试工作节点 2
   test-worker-2:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: ../Dockerfile
       target: runtime
     container_name: argus-test-worker-2
     environment:
@@ -162,8 +162,8 @@ services:
   # 分布式测试工作节点 3
   test-worker-3:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: ../Dockerfile
       target: runtime
     container_name: argus-test-worker-3
     environment:

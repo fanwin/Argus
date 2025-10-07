@@ -4,8 +4,8 @@ services:
   # 主测试服务
   test-runner:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: ../Dockerfile
       target: runtime
     container_name: argus-test-runner
     restart: unless-stopped

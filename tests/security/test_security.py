@@ -85,7 +85,7 @@ class TestSecurity:
             )
     
     @allure.story("XSS跨站脚本测试")
-    @allure.severity(allure.severity_level.HIGH)
+    @allure.severity(allure.severity_level.CRITICAL)
     @pytest.mark.security
     def test_xss_detection(self):
         """测试XSS跨站脚本漏洞检测"""

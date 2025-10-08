@@ -9,7 +9,7 @@ import allure
 import time
 from typing import Dict, Any
 
-from utilities.mobile_tester import MobileTester, MobileDevice, TouchGesture, CrossPlatformTester
+from utilities.mobile_tester import MobileTester, MobileDevice, TouchGesture
 from utilities.logger import log
 
 
